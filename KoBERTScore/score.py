@@ -67,38 +67,6 @@ def sents_to_tensor(bert_tokenizer, input_sents):
     return padded_input_ids, attention_mask, token_mask
 
 
-def prepare_bertscore_inputs(bert_tokenizer, bert_model, input_sents, output_layer_index=-1):
-    """
-    Args:
-        bert_tokenizer (transformers.PreTrainedTokenizer)
-        bert_model (transformers`s Pretrained models)
-        input_sents (list of str)
-        output_layer_index (int)
-            The index of last BERT layer which is used for token embedding
-
-    Returns:
-        outputs (torch.tensor) : (batch, max seq len, bert embed dim)
-        attention_mask (torch.tensor) : (batch, max seq len)
-        token_mask (torch.LongTensor) : (batch, max seq len)
-            True token is 1 and padded / cls / sep token is 0
-
-    Examples:
-        >>> refer_sents = ['hello world', 'my name is lovit', 'oh hi', 'where I am', 'where we are going']
-        >>> hypoh_sents = ['Hellow words', 'I am lovit', 'oh hello', 'where am I', 'where we go']
-
-        >>> refer_embeds, refer_attention_mask, refer_token_mask = prepare_bertscore_inputs(
-        >>>     tokenizer, encoder, refer_sents)
-        >>> hypoh_embeds, hypoh_attention_mask, hypoh_token_mask = prepare_bertscore_inputs(
-        >>>     tokenizer, encoder, input_sents)
-
-        >>> refer_embeds.size()          # torch.Size([5, 8, 768])
-        >>> refer_attention_mask.size()  # torch.Size([5, 8])
-    """
-    padded_input_ids, attention_mask, token_mask = sents_to_tensor(bert_tokenizer, input_sents)
-    outputs = bert_forwarding(bert_model, padded_input_ids, attention_mask, output_layer_index)
-    return outputs, attention_mask, token_mask
-
-
 def compute_pairwise_cosine(input_embeds, refer_embeds):
     """
     Args:
@@ -128,3 +96,59 @@ def compute_pairwise_cosine(input_embeds, refer_embeds):
     refer_embeds = normalize(refer_embeds)
     pairwise_cosine = torch.bmm(input_embeds, refer_embeds.permute(0, 2, 1))
     return pairwise_cosine
+
+
+def bert_score(bert_tokenizer, bert_model, references, hypotheses, idf=None, output_layer_index=-1):
+    """
+    Args:
+        bert_tokenizer (transformers.PreTrainedTokenizer)
+        bert_model (transformers`s Pretrained models)
+        references (list of str) : True sentences
+        hypotheses (list of str) : Generated sentences
+        idf (torch.tensor or None) : IDF weights
+        output_layer_index (int)
+            The index of last BERT layer which is used for token embedding
+
+    Returns:
+        R (torch.tensor) : R-BERTScore
+        P (torch.tensor) : P-BERTScore
+        F (torch.tensor) : F-BERTScore
+
+    Examples:
+        >>> from transformers import BertModel, BertTokenizer
+
+        >>> model_name = "bert-base-uncased"
+        >>> tokenizer = BertTokenizer.from_pretrained(model_name)
+        >>> encoder = BertModel.from_pretrained(model_name)
+
+        >>> refer_sents = ['hello world', 'my name is lovit', 'oh hi', 'where I am', 'where we are going']
+        >>> hypoh_sents = ['Hellow words', 'I am lovit', 'oh hello', 'where am I', 'where we go']
+        >>> bert_score(bert_tokenizer, bert_model, references, hypotheses)
+
+        $ (tensor([0.6283, 0.7944, 0.8768, 0.6904, 0.7653]),
+           tensor([0.5252, 0.8333, 0.8768, 0.6904, 0.8235]),
+           tensor([0.5721, 0.8134, 0.8768, 0.6904, 0.7934]))
+    """
+    # tokenization
+    refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, references)
+    hypoh_ids, hypoh_attention_mask, hypoh_weight_mask = sents_to_tensor(bert_tokenizer, hypotheses)
+
+    # BERT embedding
+    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
+    hypoh_embeds = bert_forwarding(bert_model, hypoh_ids, hypoh_attention_mask, output_layer_index)
+
+    pairwise_cosine = compute_pairwise_cosine(refer_embeds, hypoh_embeds)
+    R_max, _ = pairwise_cosine.max(dim=2)
+    P_max, _ = pairwise_cosine.max(dim=1)
+
+    if idf is not None:
+        refer_weight_mask = apply_idf(refer_ids, idf)
+        hypoh_weight_mask = apply_idf(hypoh_ids, idf)
+
+    R_max = rescaling(R_max)
+    P_max = rescaling(P_max)
+
+    R = (R_max * refer_weight_mask).sum(axis=1) / refer_weight_mask.sum(axis=1)
+    P = (P_max * hypoh_weight_mask).sum(axis=1) / hypoh_weight_mask.sum(axis=1)
+    F = 2 * (R * P) / (R + P)
+    return R, P, F
