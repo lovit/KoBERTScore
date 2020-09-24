@@ -98,7 +98,8 @@ def compute_pairwise_cosine(input_embeds, refer_embeds):
     return pairwise_cosine
 
 
-def bert_score(bert_tokenizer, bert_model, references, hypotheses, idf=None, output_layer_index=-1):
+def bert_score(bert_tokenizer, bert_model, references, hypotheses,
+               idf=None, output_layer_index=-1, rescale_base=0):
     """
     Args:
         bert_tokenizer (transformers.PreTrainedTokenizer)
@@ -108,6 +109,8 @@ def bert_score(bert_tokenizer, bert_model, references, hypotheses, idf=None, out
         idf (torch.tensor or None) : IDF weights
         output_layer_index (int)
             The index of last BERT layer which is used for token embedding
+        rescale_base (float) : 0 <= rescale_base < 1
+            Adjust (R-BERTScore - base) / (1 - base)
 
     Returns:
         R (torch.tensor) : R-BERTScore
@@ -145,10 +148,14 @@ def bert_score(bert_tokenizer, bert_model, references, hypotheses, idf=None, out
         refer_weight_mask = apply_idf(refer_ids, idf)
         hypoh_weight_mask = apply_idf(hypoh_ids, idf)
 
-    R_max = rescaling(R_max)
-    P_max = rescaling(P_max)
+    R_max = rescaling(R_max, rescale_base)
+    P_max = rescaling(P_max, rescale_base)
 
     R = (R_max * refer_weight_mask).sum(axis=1) / refer_weight_mask.sum(axis=1)
     P = (P_max * hypoh_weight_mask).sum(axis=1) / hypoh_weight_mask.sum(axis=1)
     F = 2 * (R * P) / (R + P)
     return R, P, F
+
+
+def rescaling(scores, base):
+    return (scores - base) / (1 - base)
