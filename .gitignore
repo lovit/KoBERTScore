@@ -1,0 +1,12 @@
+# Mac
+.DS_Store
+
+# Python
+build/
+dist/
+*.egg-info
+*.pyc
+__pycache__
+
+# Ipython notebook
+.check_points
