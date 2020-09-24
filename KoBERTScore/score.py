@@ -82,7 +82,7 @@ def prepare_bertscore_inputs(bert_tokenizer, bert_model, input_sents, output_lay
         >>> input_attention_mask.size()  # torch.Size([5, 7])
     """
     padded_input_ids, attention_mask = sents_to_tensor(bert_tokenizer, input_sents)
-    outputs = bert_forwarding(bert_model, padded_input_ids, attention_mask)
+    outputs = bert_forwarding(bert_model, padded_input_ids, attention_mask, output_layer_index)
     return outputs, attention_mask
 
 
