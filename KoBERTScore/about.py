@@ -1,3 +1,3 @@
 __author__ = 'lovit'
-__name__ = 'PACKAGE'
+__name__ = 'KoBERTScore'
 __version__ = '0.0.1'

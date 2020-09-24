@@ -9,7 +9,7 @@ with open(os.path.join(os.path.dirname(__file__), 'README.md'), encoding='utf-8'
 def get_about():
     about = {}
     basedir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(basedir, 'PACKAGE', 'about.py')) as f:
+    with open(os.path.join(basedir, 'KoBERTScore', 'about.py')) as f:
         exec(f.read(), about)
     return about
 
@@ -25,14 +25,14 @@ setup(
     version=about['__version__'],
     author=about['__author__'],
     author_email='soy.lovit@gmail.com',
-    url='https://github.com/lovit/PACKAGE_URL',
-    description="PACKAGE DESCRIPTION",
+    url='https://github.com/lovit/ko-BERTScore',
+    description="BERTScore for Korean",
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=requirements(),
-    keywords = ['PACKAGE_KEYWORDS'],
+    keywords = ['nlp', 'BERTScore', 'Korean'],
     packages=find_packages(),
     entry_points = {
-        'console_scripts': ['PACKAGE=PACKAGE.cli:main'],
+        'console_scripts': ['kobertscore=KoBERTScore.cli:main'],
     }
 )
