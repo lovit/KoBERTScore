@@ -32,6 +32,8 @@ def sents_to_tensor(bert_tokenizer, input_sents):
     Returns:
         padded_input_ids (torch.LongTensor) : (batch, max seq len)
         attention_mask (torch.LongTensor) : (batch, max seq len)
+        token_mask (torch.LongTensor) : (batch, max seq len)
+            True token is 1 and padded / cls / sep token is 0
 
     Examples::
         >>> from transformers import BertTokenizer
@@ -48,12 +50,21 @@ def sents_to_tensor(bert_tokenizer, input_sents):
                    [1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 0, 0, 0],
                    [1, 1, 1, 1, 1, 0, 0],
-                   [1, 1, 1, 1, 1, 0, 0]]))
+                   [1, 1, 1, 1, 1, 0, 0]]),
+           tensor([[0, 1, 1, 1, 0, 0, 0],
+                   [0, 1, 1, 1, 1, 1, 0],
+                   [0, 1, 1, 0, 0, 0, 0],
+                   [0, 1, 1, 1, 0, 0, 0],
+                   [0, 1, 1, 1, 0, 0, 0]]))
     """
     inputs = bert_tokenizer.batch_encode_plus(input_sents, padding=True)
     padded_input_ids = torch.LongTensor(inputs['input_ids'])
     attention_mask = torch.LongTensor(inputs['attention_mask'])
-    return padded_input_ids, attention_mask
+
+    zero_mask = torch.zeros(attention_mask.size(), dtype=torch.long)
+    token_mask = torch.where(padded_input_ids == bert_tokenizer.cls_token_id, zero_mask, attention_mask)
+    token_mask = torch.where(padded_input_ids == bert_tokenizer.sep_token_id, zero_mask, token_mask)
+    return padded_input_ids, attention_mask, token_mask
 
 
 def prepare_bertscore_inputs(bert_tokenizer, bert_model, input_sents, output_layer_index=-1):
@@ -68,20 +79,24 @@ def prepare_bertscore_inputs(bert_tokenizer, bert_model, input_sents, output_lay
     Returns:
         outputs (torch.tensor) : (batch, max seq len, bert embed dim)
         attention_mask (torch.tensor) : (batch, max seq len)
+        token_mask (torch.LongTensor) : (batch, max seq len)
+            True token is 1 and padded / cls / sep token is 0
 
     Examples:
-        >>> input_sents = ['Hellow words', 'I am lovit', 'oh hello', 'where am I', 'where we go']
         >>> refer_sents = ['hello world', 'my name is lovit', 'oh hi', 'where I am', 'where we are going']
+        >>> hypoh_sents = ['Hellow words', 'I am lovit', 'oh hello', 'where am I', 'where we go']
 
-        >>> input_embeds, input_attention_mask = prepare_bertscore_inputs(tokenizer, encoder, input_sents)
-        >>> refer_embeds, refer_attention_mask = prepare_bertscore_inputs(tokenizer, encoder, refer_sents)
+        >>> refer_embeds, refer_attention_mask, refer_token_mask = prepare_bertscore_inputs(
+        >>>     tokenizer, encoder, refer_sents)
+        >>> hypoh_embeds, hypoh_attention_mask, hypoh_token_mask = prepare_bertscore_inputs(
+        >>>     tokenizer, encoder, input_sents)
 
-        >>> input_embeds.size()          # torch.Size([5, 7, 768])
-        >>> input_attention_mask.size()  # torch.Size([5, 7])
+        >>> refer_embeds.size()          # torch.Size([5, 8, 768])
+        >>> refer_attention_mask.size()  # torch.Size([5, 8])
     """
-    padded_input_ids, attention_mask = sents_to_tensor(bert_tokenizer, input_sents)
+    padded_input_ids, attention_mask, token_mask = sents_to_tensor(bert_tokenizer, input_sents)
     outputs = bert_forwarding(bert_model, padded_input_ids, attention_mask, output_layer_index)
-    return outputs, attention_mask
+    return outputs, attention_mask, token_mask
 
 
 def compute_pairwise_cosine(input_embeds, refer_embeds):
