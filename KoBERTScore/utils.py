@@ -5,6 +5,8 @@ from tqdm import tqdm
 
 def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
     """
+    Train IDF vector with Laplace (add one) smoothing
+
     Args:
         bert_tokenizer (transformers.PreTrainedTokenizer)
         references (list of str) : True sentences
