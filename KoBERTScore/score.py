@@ -101,6 +101,25 @@ def compute_pairwise_cosine(input_embeds, refer_embeds):
     return pairwise_cosine
 
 
+def compute_RPF(refer_embeds, hypoh_embeds, refer_weight_mask,
+                hypoh_weight_mask, idf=None, rescale_base=0):
+
+    pairwise_cosine = compute_pairwise_cosine(refer_embeds, hypoh_embeds)
+    R_max, _ = pairwise_cosine.max(dim=2)
+    P_max, _ = pairwise_cosine.max(dim=1)
+
+    if idf is not None:
+        refer_weight_mask = apply_idf(refer_ids, idf)
+        hypoh_weight_mask = apply_idf(hypoh_ids, idf)
+
+    R_max = rescaling(R_max, rescale_base)
+    P_max = rescaling(P_max, rescale_base)
+
+    R = (R_max * refer_weight_mask).sum(axis=1) / refer_weight_mask.sum(axis=1)
+    P = (P_max * hypoh_weight_mask).sum(axis=1) / hypoh_weight_mask.sum(axis=1)
+    F = 2 * (R * P) / (R + P)
+    return R, P, F
+
 def bert_score(bert_tokenizer, bert_model, references, hypotheses,
                idf=None, output_layer_index=-1, rescale_base=0):
     """
@@ -143,20 +162,11 @@ def bert_score(bert_tokenizer, bert_model, references, hypotheses,
     refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
     hypoh_embeds = bert_forwarding(bert_model, hypoh_ids, hypoh_attention_mask, output_layer_index)
 
-    pairwise_cosine = compute_pairwise_cosine(refer_embeds, hypoh_embeds)
-    R_max, _ = pairwise_cosine.max(dim=2)
-    P_max, _ = pairwise_cosine.max(dim=1)
-
-    if idf is not None:
-        refer_weight_mask = apply_idf(refer_ids, idf)
-        hypoh_weight_mask = apply_idf(hypoh_ids, idf)
-
-    R_max = rescaling(R_max, rescale_base)
-    P_max = rescaling(P_max, rescale_base)
-
-    R = (R_max * refer_weight_mask).sum(axis=1) / refer_weight_mask.sum(axis=1)
-    P = (P_max * hypoh_weight_mask).sum(axis=1) / hypoh_weight_mask.sum(axis=1)
-    F = 2 * (R * P) / (R + P)
+    # Compute bert RPF
+    R, P, F = compute_RPF(
+        refer_embeds, hypoh_embeds,
+        refer_weight_mask, hypoh_weight_mask,
+        idf, rescale_base)
     return R, P, F
 
 
