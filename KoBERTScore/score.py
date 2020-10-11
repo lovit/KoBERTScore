@@ -162,6 +162,13 @@ def bert_score(bert_tokenizer, bert_model, references, hypotheses,
 
 def apply_idf(ids, idf_embed):
     """
+    Args:
+        ids (torch.tensor) : (batch, max seq len)
+        idf_embed (torch.nn.Embedding) : (n vocab, 1)
+
+    Returns:
+        embedded (torch.tensor) : (batch, max seq len)
+
     Examples::
         >>> from torch import nn
         >>> idf_weight = torch.tensor([[0, 0.5, 0.25, 0.3, 5, 3.2]]).t()
