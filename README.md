@@ -33,7 +33,7 @@ candidates = [
 ]
 
 bertscore(references, candidates, batch_size=128)
-[0.5643115, 0.4720116, 0.2556618, 0.2268927]
+# [0.5643115, 0.4720116, 0.2556618, 0.2268927]
 ```
 
 ### Finding best layer
