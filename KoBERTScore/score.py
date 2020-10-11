@@ -187,4 +187,15 @@ def apply_idf(ids, idf_embed):
 
 
 def rescaling(scores, base):
+    """
+    Transform `(score - base) / (1 - base)
+
+    Args:
+        scores (float or torch.tensor) : float or (batch, max seq len)
+        base (float)
+
+    Returns:
+        scores_ (float or torch.tensor) : float or (batch, max seq len)
+            Transformed scores
+    """
     return (scores - base) / (1 - base)
