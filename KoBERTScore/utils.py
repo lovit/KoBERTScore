@@ -1,6 +1,9 @@
 import math
 import numpy as np
 import torch
+from bokeh.models import ColumnDataSource
+from bokeh.models import HoverTool, SaveTool
+from bokeh.plotting import figure
 from collections import Counter
 from scipy.stats import pearsonr
 from torch import nn
@@ -159,3 +162,25 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
     P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
     F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
     return R, P, F
+
+
+def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
+    if p is None:
+        tooltips = [('layer', '$x'), (y_name, '$y')]
+        tools = [HoverTool(names=["circle"]), SaveTool()]
+
+        p = figure(height=600, width=600, tooltips=tooltips, tools=tools)
+        p.xaxis.axis_label = 'Layer'
+        p.yaxis.axis_label = y_name
+
+    source = ColumnDataSource(data=dict(
+        x = list(range(array.shape[0])),
+        y = array
+    ))
+
+    if isinstance(legend, str):
+        p.vline_stack('y', x='x', color=color, legend_label=legend, source=source)
+    else:
+        p.vline_stack('y', x='x', color=color, source=source)
+    p.circle(x='x', y='y', size=8, color=color, alpha=0.5, name='circle', source=source)
+    return p
