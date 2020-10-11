@@ -8,6 +8,27 @@ from tqdm import tqdm
 from .score import sents_to_tensor, bert_forwarding, compute_RPF
 
 
+def idf_numpy_to_embed(idf_array):
+    """
+    Args:
+        idf_array (numpy.ndarray) : shape=(n_vocab,)
+
+    Returns:
+        idf_embed (torch.nn.Embedding) : size=(n_vocab, 1)
+
+    Examples::
+        >>> import numpy as np
+        >>> idf = np.random.random_sample(10000)
+        >>> idf_embed = idf_numpy_to_embed(idf)
+        >>> type(idf_embed)
+        $ torch.nn.modules.sparse.Embedding
+    """
+    idf = torch.tensor([idf_array]).T
+    idf_embed = nn.Embedding(idf.size()[0], 1, _weight=idf)
+    idf_embed.weight.requires_grad = False
+    return idf_embed
+
+
 def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
     """
     Train IDF vector with Laplace (add one) smoothing
