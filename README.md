@@ -13,6 +13,9 @@ python setup.py install
 ## Usage
 
 ### Evaluate sentence pairs
+
+Using BERTScore class instance
+
 ```python
 from KoBERTScore import BERTScore
 
@@ -34,6 +37,22 @@ candidates = [
 
 bertscore(references, candidates, batch_size=128)
 # [0.5643115, 0.4720116, 0.2556618, 0.2268927]
+```
+
+Using manually loaded BERT model
+
+```python
+from transformers import BertModel, BertTokenizer
+
+model_name = "bert-base-uncased"
+tokenizer = BertTokenizer.from_pretrained(model_name)
+encoder = BertModel.from_pretrained(model_name)
+pretrained_idf_embedding # torch.nn.Embedding
+
+references = ['hello world', 'my name is lovit', 'oh hi', 'where I am', 'where we are going']
+candidates = ['Hellow words', 'I am lovit', 'oh hello', 'where am I', 'where we go']
+bert_score(bert_tokenizer, bert_model, references, candidates)
+bert_score(bert_tokenizer, bert_model, references, candidates, idf=pretrained_idf_embedding)
 ```
 
 ### Draw pairwise cosine similarity of bert embedding
