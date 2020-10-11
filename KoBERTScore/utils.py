@@ -96,8 +96,14 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         >>> tokenizer = BertTokenizer.from_pretrained(model_name)
         >>> encoder = BertModel.from_pretrained(model_name)
 
-        >>> references = ['날씨는 좋고 할일은 많고 어우 연휴 끝났다', '힘을 내볼까? 잘할 수 있어!', '이 문장은 점수가 낮아야만 합니다']
-        >>> candidates = ['날씨가 좋다 하지만 할일이 많다 일해라 인간', '힘내라 잘할 수 있다', '테넷봤나요? 역의역의역은역인가요?']
+        >>> references = [
+        >>>     '날씨는 좋고 할일은 많고 어우 연휴 끝났다',
+        >>>     '힘을 내볼까? 잘할 수 있어!',
+        >>>     '이 문장은 점수가 낮아야만 합니다']
+        >>> candidates = [
+        >>>     '날씨가 좋다 하지만 할일이 많다 일해라 인간',
+        >>>     '힘내라 잘할 수 있다',
+        >>>     '테넷봤나요? 역의역의역은역인가요?']
         >>> qualities = [0.85, 0.98, 0.05]
 
         >>> R, P, F = correlation(tokenizer, encoder, references, candidates, qualities)

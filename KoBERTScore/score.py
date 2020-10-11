@@ -1,5 +1,6 @@
 import torch
 import torch.nn.functional as F
+from transformers import BertModel, BertTokenizer
 
 
 def bert_score(bert_tokenizer, bert_model, references, candidates,
@@ -240,3 +241,52 @@ def rescaling(scores, base):
             Transformed scores
     """
     return (scores - base) / (1 - base)
+
+
+class BERTScore:
+    def __init__(self, model_name_or_path, best_layer=-1, idf_path=None, rescale_base=0):
+        self.tokenizer, self.encoder = load_model(model_name_or_path, best_layer)
+        self.rescale_base = rescale_base
+        if idf_path is not None:
+            self.idf = load_idf(idf_path)
+            if len(self.tokenizer) != self.idf.weight.size()[0]:
+                raise ValueError(
+                    'The number of vocab in `tokenizer` must be same wigh `idf` size\n'
+                    f'len(tokenizer)={len(tokenizer)}, len(idf)={self.idf.weight.size()[0]}')
+        else:
+            self.idf = None
+
+    def __call__(self, references, candidates):
+        return self.score(references, candidates)
+
+    def score(self, references, candidates):
+        R, P, F = bert_score(
+            self.tokenizer, self.encoder,
+            references, candidates,
+            idf=self.idf, rescale_base=self.rescale_base)
+        return F.numpy().tolist()
+
+
+def load_model(model_name_or_path, best_layer=-1):
+    # TODO: other pretrained bert models
+    tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
+    encoder = BertModel.from_pretrained(model_name_or_path)
+    if best_layer > 0:
+        encoder = truncate_bert_layers(encoder, best_layer)
+    return tokenizer, encoder
+
+
+def truncate_bert_layers(encoder, last_layer):
+    encoder.encoder.layer = torch.nn.ModuleList([
+        layer for layer in encoder.encoder.layer[:last_layer]
+    ])
+    return encoder
+
+
+def load_idf(path):
+    with open(path, encoding='utf-8') as f:
+        weight = [float(line.strip()) for line in f]
+    weight = torch.tensor([weight]).T
+    n_vocab = weight.size()[0]
+    idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
+    return idf
