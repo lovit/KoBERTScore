@@ -225,6 +225,12 @@ def rescaling(scores, base):
     """
     Transform `(score - base) / (1 - base)
 
+    For computing `base`, authors use Common Crawl in paper.
+    They create 1M candidate-reference pairs by grouping two random sentences.
+    Because each pair has very low lexical and semantic overlapping,
+    and determine `base` as average BERTScore computed on these sentence pairs.
+    - Refer: BERTScore: Evaluating Text Generation with BERT (https://arxiv.org/abs/1904.09675)
+
     Args:
         scores (float or torch.tensor) : float or (batch, max seq len)
         base (float)
