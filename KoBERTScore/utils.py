@@ -31,17 +31,17 @@ def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
         iterator = begin_index
 
     for i in iterator:
-        encoding = tokenizer.batch_encode_plus(
+        encoding = bert_tokenizer.batch_encode_plus(
             references[i: i + batch_size],
             add_special_tokens=False)
         subcounter = Counter(idx for sent in encoding['input_ids'] for idx in sent)
         counter.update(subcounter)
 
-    idf = np.ones(tokenizer.vocab_size)
+    idf = np.ones(bert_tokenizer.vocab_size)
     indices, df = zip(*counter.items())
     idf[np.array(indices)] += np.array(df)
     idf = 1 / idf
-    idf[np.array(tokenizer.all_special_ids, dtype=np.int)] = 0
+    idf[np.array(bert_tokenizer.all_special_ids, dtype=np.int)] = 0
     return idf
 
 
