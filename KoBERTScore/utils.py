@@ -1,15 +1,18 @@
 import math
 import numpy as np
 import torch
-from bokeh.models import ColumnDataSource
+from bokeh.models import ColumnDataSource, LinearColorMapper
 from bokeh.models import HoverTool, SaveTool
+from bokeh.palettes import Blues256
 from bokeh.plotting import figure
+from bokeh.transform import dodge
 from collections import Counter
 from scipy.stats import pearsonr
 from torch import nn
 from tqdm import tqdm
 
-from .score import sents_to_tensor, bert_forwarding, compute_RPF
+from .score import sents_to_tensor, bert_forwarding
+from .score import compute_pairwise_cosine, compute_RPF
 
 
 def idf_numpy_to_embed(idf_array):
@@ -189,4 +192,92 @@ def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
     else:
         p.vline_stack('y', x='x', color=color, source=source)
     p.circle(x='x', y='y', size=8, color=color, alpha=0.5, name='circle', source=source)
+    return p
+
+
+def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=None,
+                          output_layer_index=-1, title=None):
+    """
+    Args:
+    Examples::
+        Loading BERT manually
+
+            >>> from transformers import BertModel, BertTokenizer
+            >>> from bokeh.plotting import show
+            >>> from KoBERTScore import plot_bertscore_detail
+
+            >>> model_name = "bert-base-uncased"
+            >>> tokenizer = BertTokenizer.from_pretrained(model_name)
+            >>> encoder = BertModel.from_pretrained(model_name)
+
+            >>> reference = '날씨는 좋고 할일은 많고 어우 연휴 끝났다'
+            >>> candidate = '날씨가 좋다 하지만 할일이 많다 일해라 인간'
+            >>> p = plot_bertscore_detail(reference, candidate, tokenizer, encoder)
+            >>> show(p)
+
+        If env is IPython notebook
+
+            >>> from bokeh.plotting import output_notebook
+            >>> output_notebook()
+            >>> show(p)
+
+        Using BERTScore class instance
+
+            >>> from KoBERTScore import BERTScore, plot_bertscore_detail
+            >>> model_name = "beomi/kcbert-base"
+            >>> bertscore = BERTScore(model_name, best_layer=4)
+            >>> p = plot_bertscore_detail(
+            >>>     reference, candidate, bertscore.tokenizer, bertscore.encoder)
+    """
+    if not isinstance(reference, str) or not isinstance(candidate, str):
+        raise ValueError('`reference` and `candidate` must be `str`')
+
+    # tokenization
+    refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, [reference])
+    candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, [candidate])
+
+    # BERT embedding + Cosine
+    refer_embed = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
+    candi_embed = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
+    pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
+
+    # Prepare figure
+    tooltips = [
+        ('Reference token', '@refer'),
+        ('Candidate token', '@candi'),
+        ('Cosine', '@cos')
+    ]
+    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
+    candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
+    yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
+    xrange = [f'{i}: {candi_vocab[i]}' for i in range(candi_ids.size()[1] - 2)]
+    p = figure(title=title, height=500, width=500, x_range=xrange, y_range=yrange, tooltips=tooltips)
+    p.xaxis.axis_label_text_font_size = '13pt'
+    p.yaxis.axis_label_text_font_size = '13pt'
+
+    # Prepare source
+    x = []
+    y = []
+    refers = []
+    candis = []
+    cos = []
+    cos_str = []
+    for i_ref, refer in enumerate(refer_ids[0][1: -1].numpy()):
+        for i_can, candi in enumerate(candi_ids[0][1: -1].numpy()):
+            y.append(f'{i_ref}: {refer_vocab[i_ref]}')
+            x.append(f'{i_can}: {candi_vocab[i_can]}')
+            refers.append(bert_tokenizer.ids_to_tokens[refer])
+            candis.append(bert_tokenizer.ids_to_tokens[candi])
+            cos.append(pairwise_cosine[i_ref + 1, i_can + 1])
+            cos_str.append(f'{pairwise_cosine[i_ref + 1, i_can + 1]:.3}')
+    source = ColumnDataSource(data={
+        'x': x, 'y': y, 'refer': refers, 'candi': candis, 'cos': cos, 'cos_str': cos_str
+    })
+
+    cmap = LinearColorMapper(palette=list(reversed(Blues256)), low=0.0, high=1.0)
+    p.rect('x', 'y', 0.95, 0.95, fill_color={'field': 'cos', 'transform': cmap},
+           line_color=None, fill_alpha=0.7, source=source)
+    p.text(dodge("x", -0.3, range=p.x_range),
+           dodge("y", -0.1, range=p.y_range),
+           text='cos_str', text_font_size='13px', source=source)
     return p

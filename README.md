@@ -33,8 +33,42 @@ candidates = [
 ]
 
 bertscore(references, candidates, batch_size=128)
-[0.5643115, 0.4720116, 0.2556618, 0.2268927]
+# [0.5643115, 0.4720116, 0.2556618, 0.2268927]
 ```
+
+### Draw pairwise cosine similarity of bert embedding
+
+Loading BERT manually
+
+```python
+from transformers import BertModel, BertTokenizer
+from bokeh.plotting import show, output_notebook
+from KoBERTScore import plot_bertscore_detail
+
+model_name = "bert-base-uncased"
+tokenizer = BertTokenizer.from_pretrained(model_name)
+encoder = BertModel.from_pretrained(model_name)
+
+reference = '날씨는 좋고 할일은 많고 어우 연휴 끝났다'
+candidate = '날씨가 좋다 하지만 할일이 많다 일해라 인간'
+p = plot_bertscore_detail(reference, candidate, tokenizer, encoder)
+
+# output_notebook()  # If env is IPython notebook
+show(p)
+```
+
+Using BERTScore class instance
+
+```python
+from KoBERTScore import BERTScore, plot_bertscore_detail
+
+model_name = "beomi/kcbert-base"
+bertscore = BERTScore(model_name, best_layer=4)
+p = plot_bertscore_detail(
+    reference, candidate, bertscore.tokenizer, bertscore.encoder)
+```
+
+![](resources/bertscore_pairwise_cosine.png)
 
 ### Finding best layer
 ```
