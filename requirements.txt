@@ -1,3 +1,6 @@
+bokeh>=1.4.0
 flake8>=3.6.0
+scipy>=1.4.0
 torch>=1.6.0
 transformers>=3.1.0
+tqdm>=4.48.0
