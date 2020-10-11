@@ -128,7 +128,7 @@ def bert_score(bert_tokenizer, bert_model, references, hypotheses,
         bert_model (transformers`s Pretrained models)
         references (list of str) : True sentences
         hypotheses (list of str) : Generated sentences
-        idf (torch.tensor or None) : IDF weights
+        idf (torch.nn.Embedding or None) : IDF weights
         output_layer_index (int)
             The index of last BERT layer which is used for token embedding
         rescale_base (float) : 0 <= rescale_base < 1
