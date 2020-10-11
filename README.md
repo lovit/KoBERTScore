@@ -20,3 +20,7 @@ kobertscore best_layer \
   --draw_plot \
   --plot_path .
 ```
+
+## Best layer
+
+![](resources/kcbert_korsts.png)
