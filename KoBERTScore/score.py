@@ -151,7 +151,7 @@ def compute_RPF(refer_embeds, candi_embeds, refer_weight_mask, candi_weight_mask
     R_max, _ = pairwise_cosine.max(dim=2)
     P_max, _ = pairwise_cosine.max(dim=1)
 
-    if (idf is not None) and (refer_id is not None) and (candi_ids is not None):
+    if (idf is not None) and (refer_ids is not None) and (candi_ids is not None):
         refer_weight_mask = apply_idf(refer_ids, idf)
         candi_weight_mask = apply_idf(candi_ids, idf)
 
