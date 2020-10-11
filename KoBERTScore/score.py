@@ -103,7 +103,30 @@ def compute_pairwise_cosine(input_embeds, refer_embeds):
 
 def compute_RPF(refer_embeds, hypoh_embeds, refer_weight_mask,
                 hypoh_weight_mask, idf=None, rescale_base=0):
+    """
+    Args:
+        refer_embeds (torch.tensor) : (B, K_i, D)
+            B : batch size
+            K_i : maximum sequence length in `input_embed`
+            D : BERT embedding dim
+        hypoh_embeds (torch.tensor) : (B, K_r, D)
+            B : batch size
+            K_r : maximum sequence length in `refer_embeds`
+            D : BERT embedding dim
+        refer_weight_mask (torch.tensor) : (batch, max seq len)
+            token mask or IDF weight mask
+        hypoh_weight_mask (torch.tensor) : (batch, max seq len)
+            token mask or IDF weight mask
+        idf (torch.nn.Embedding or None) : IDF weights
+        rescale_base (float) : 0 <= rescale_base < 1
+            Adjust (R-BERTScore - base) / (1 - base)
 
+    Returns:
+        R (torch.tensor) : R-BERTScore
+        P (torch.tensor) : P-BERTScore
+        F (torch.tensor) : F-BERTScore
+
+    """
     pairwise_cosine = compute_pairwise_cosine(refer_embeds, hypoh_embeds)
     R_max, _ = pairwise_cosine.max(dim=2)
     P_max, _ = pairwise_cosine.max(dim=1)
