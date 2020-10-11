@@ -1,6 +1,8 @@
+import math
 import torch
 import torch.nn.functional as F
 from transformers import BertModel, BertTokenizer
+from tqdm import tqdm
 
 
 def bert_score(bert_tokenizer, bert_model, references, candidates,
@@ -256,15 +258,30 @@ class BERTScore:
         else:
             self.idf = None
 
-    def __call__(self, references, candidates):
-        return self.score(references, candidates)
+    def __call__(self, references, candidates, batch_size=128, verbose=True):
+        return self.score(references, candidates, batch_size, verbose)
 
-    def score(self, references, candidates):
-        R, P, F = bert_score(
-            self.tokenizer, self.encoder,
-            references, candidates,
-            idf=self.idf, rescale_base=self.rescale_base)
-        return F.numpy().tolist()
+    def score(self, references, candidates, batch_size=128, verbose=True):
+        n_examples = len(references)
+        n_batch = math.ceil(n_examples / batch_size)
+        if verbose:
+            step_iterator = tqdm(range(n_batch), desc='Calculating BERTScore', total=n_batch)
+        else:
+            step_iterator = range(n_batch)
+
+        F = []
+        for step in step_iterator:
+            b = step * batch_size
+            e = min((step + 1) * batch_size, n_examples)
+            refer_batch = references[b: e]
+            candi_batch = candidates[b: e]
+
+            _, _, F_batch = bert_score(
+                self.tokenizer, self.encoder,
+                refer_batch, candi_batch,
+                idf=self.idf, rescale_base=self.rescale_base)
+            F += F_batch.numpy().tolist()
+        return F
 
 
 def load_model(model_name_or_path, best_layer=-1):

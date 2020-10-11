@@ -32,7 +32,7 @@ candidates = [
     '테넷봤나요? 역의역의역은역인가요?'
 ]
 
-bertscore(references, candidates)
+bertscore(references, candidates, batch_size=128)
 [0.5643115, 0.4720116, 0.2556618, 0.2268927]
 ```
 
