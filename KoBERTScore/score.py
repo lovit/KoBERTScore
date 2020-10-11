@@ -8,11 +8,12 @@ def bert_forwarding(bert_model, input_ids=None, attention_mask=None, output_laye
         bert_model (transformers`s Pretrained models)
         input_ids (torch.LongTensor) : (batch, max seq len)
         attention_mask (torch.LongTensor) : (batch, max seq len)
-        output_layer_index (int)
+        output_layer_index (int or str)
             The index of last BERT layer which is used for token embedding
+            If type of `output_layer_index` is `str`, it returns hidden states of all layers
 
     Returns:
-        hidden_states (torch.tensor) : (B, K, D)
+        hidden_states (torch.tensor) : (B, K, D) or (n_layers, B, K, D)
             B : batch size
             K : maximum sequence length in `input_ids`
             D : BERT embedding dim
@@ -20,6 +21,8 @@ def bert_forwarding(bert_model, input_ids=None, attention_mask=None, output_laye
     with torch.no_grad():
         _, _, hidden_states = bert_model(
             input_ids, attention_mask=attention_mask, output_hidden_states=True)
+    if output_layer_index == 'all':
+        return hidden_states
     return hidden_states[output_layer_index]
 
 
