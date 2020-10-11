@@ -2,6 +2,7 @@ import math
 import numpy as np
 from collections import Counter
 from scipy.stats import pearsonr
+from torch import nn
 from tqdm import tqdm
 
 from .score import sents_to_tensor, bert_forwarding, compute_RPF
@@ -40,6 +41,7 @@ def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
     indices, df = zip(*counter.items())
     idf[np.array(indices)] += np.array(df)
     idf = 1 / idf
+    idf[np.array(tokenizer.all_special_ids, dtype=np.int)] = 0
     return idf
 
 
