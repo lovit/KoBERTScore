@@ -23,4 +23,6 @@ kobertscore best_layer \
 
 ## Best layer
 
+### KcBERT + KorSTS
+- layer index = 4 (0 is token embedding layer)
 ![](resources/kcbert_korsts.png)
