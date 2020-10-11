@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import torch
 from collections import Counter
 from scipy.stats import pearsonr
 from torch import nn
