@@ -44,8 +44,9 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
 
     # BERT embedding
-    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
-    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
+    device = next(bert_model.parameters()).device
+    refer_embeds = bert_forwarding(bert_model, refer_ids.to(device), refer_attention_mask.to(device), output_layer_index)
+    candi_embeds = bert_forwarding(bert_model, candi_ids.to(device), candi_attention_mask.to(device), output_layer_index)
 
     # Compute bert RPF
     R, P, F = compute_RPF(
@@ -246,8 +247,12 @@ def rescaling(scores, base):
 
 
 class BERTScore:
-    def __init__(self, model_name_or_path, best_layer=-1, idf_path=None, rescale_base=0):
+    def __init__(self, model_name_or_path, best_layer=-1, idf_path=None, rescale_base=0, device=None):
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = device
         self.tokenizer, self.encoder = load_model(model_name_or_path, best_layer)
+        self.encoder = self.encoder.to(device)
         self.rescale_base = rescale_base
         if idf_path is not None:
             self.idf = load_idf(idf_path)
