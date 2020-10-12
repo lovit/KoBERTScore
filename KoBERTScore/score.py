@@ -45,8 +45,8 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
 
     # BERT embedding
     device = next(bert_model.parameters()).device
-    refer_embeds = bert_forwarding(bert_model, refer_ids.to(device), refer_attention_mask.to(device), output_layer_index)
-    candi_embeds = bert_forwarding(bert_model, candi_ids.to(device), candi_attention_mask.to(device), output_layer_index)
+    refer_embeds = bert_forwarding(bert_model, refer_ids.to(device), refer_attention_mask.to(device), output_layer_index).cpu()
+    candi_embeds = bert_forwarding(bert_model, candi_ids.to(device), candi_attention_mask.to(device), output_layer_index).cpu()
 
     # Compute bert RPF
     R, P, F = compute_RPF(
