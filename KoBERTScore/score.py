@@ -251,7 +251,10 @@ class BERTScore:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
-        self.tokenizer, self.encoder = load_model(model_name_or_path, best_layer)
+        if isinstance(model_name_or_path, tuple):
+            self.tokenizer, self.encoder = model_name_or_path
+        else:
+            self.tokenizer, self.encoder = load_model(model_name_or_path, best_layer)
         self.encoder = self.encoder.to(device)
         self.rescale_base = rescale_base
         if idf_path is not None:
