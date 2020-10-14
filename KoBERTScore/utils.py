@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import torch
+from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, LinearColorMapper
 from bokeh.models import HoverTool, SaveTool
 from bokeh.palettes import Blues256
@@ -242,7 +243,9 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
 
     p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title)
-    return p_cos
+    p_idf = draw_idf(bert_tokenizer, refer_ids, idf)
+    gp = gridplot([[p_cos, p_idf]])
+    return gp
 
 
 def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title=None):
@@ -285,3 +288,40 @@ def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, 
     p.text(dodge("x", -0.3, range=p.x_range),
            dodge("y", -0.1, range=p.y_range),
            text='cos_str', text_font_size='13px', source=source)
+    return p
+
+
+def draw_idf(bert_tokenizer, refer_ids, idf):
+    if idf is None:
+        n_vocab = len(bert_tokenizer)
+        weight = torch.ones((n_vocab, 1), dtype=torch.float)
+        idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
+
+    tooltips = [
+        ('Reference token', '@refer'),
+        ('IDF', '@idf')
+    ]
+    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
+    yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
+    xrange = ['IDF']
+    p = figure(height=500, width=50, x_range=xrange, y_range=yrange, tooltips=tooltips, tools=[])
+    p.yaxis.visible = False
+
+    y = []
+    refers = []
+    idf = list(idf(refer_ids[0][1: -1]).detach().numpy().reshape(-1))
+    idf_str = []
+    for i_ref, refer in enumerate(refer_ids[0][1: -1].numpy()):
+        y.append(f'{i_ref}: {refer_vocab[i_ref]}')
+        refers.append(bert_tokenizer.ids_to_tokens[refer])
+        idf_str.append(f'{idf[i_ref]:.3}')
+    x = ['IDF'] * len(y)
+    source = ColumnDataSource(data={
+        'x': x, 'y': y, 'refer': refers, 'idf': idf, 'idf_str': idf_str
+    })
+
+    p.rect('x', 'y', 0.95, 0.95, line_color=None, fill_color='white', source=source)
+    p.text(dodge("x", -0.3, range=p.x_range),
+           dodge("y", -0.1, range=p.y_range),
+           text='idf_str', text_font_size='13px', source=source)
+    return p
