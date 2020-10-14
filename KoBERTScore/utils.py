@@ -241,14 +241,19 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     candi_embed = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
     pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
 
-    # Prepare figure
+    p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title)
+    return p_cos
+
+
+def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title=None):
+    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
+    candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
+
     tooltips = [
         ('Reference token', '@refer'),
         ('Candidate token', '@candi'),
         ('Cosine', '@cos')
     ]
-    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
-    candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
     yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
     xrange = [f'{i}: {candi_vocab[i]}' for i in range(candi_ids.size()[1] - 2)]
     p = figure(title=title, height=500, width=500, x_range=xrange, y_range=yrange, tooltips=tooltips)
@@ -280,4 +285,3 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     p.text(dodge("x", -0.3, range=p.x_range),
            dodge("y", -0.1, range=p.y_range),
            text='cos_str', text_font_size='13px', source=source)
-    return p
