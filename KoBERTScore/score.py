@@ -1,4 +1,5 @@
 import math
+import os
 import torch
 import torch.nn.functional as F
 from transformers import BertModel, BertTokenizer
@@ -292,12 +293,33 @@ class BERTScore:
         return F
 
 
+MODEL_TO_BEST_LAYER = {
+    'beomi/kcbert-base': 4,
+    'monologg/kobert': -1,        # need experiments
+    'monologg/distilkobert': -1,  # need experiments
+    'monologg/koelectra-base-v2-discriminator': -1  # need experiments
+}
+
+
 def load_model(model_name_or_path, best_layer=-1):
-    # TODO: other pretrained bert models
-    tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
-    encoder = BertModel.from_pretrained(model_name_or_path)
+    if os.path.exists(model_name_or_path):
+        tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
+        encoder = BertModel.from_pretrained(model_name_or_path)
+    elif model_name_or_path in MODEL_TO_BEST_LAYER:
+        tokenizer = BertTokenizer.from_pretrained(model_name_or_path)
+        encoder = BertModel.from_pretrained(model_name_or_path)
+    else:
+        raise ValueError(
+            f'Ko-BERTScore uses only {list(MODEL_TO_BEST_LAYER.keys())} or local model'
+            'Check `model_name_or_path`')
+
+    if best_layer == -1:
+        best_layer = MODEL_TO_BEST_LAYER.get(model_name_or_path, -1)
+
     if best_layer > 0:
         encoder = truncate_bert_layers(encoder, best_layer)
+
+    print(f'Load {model_name_or_path} with {best_layer} layers')
     return tokenizer, encoder
 
 
