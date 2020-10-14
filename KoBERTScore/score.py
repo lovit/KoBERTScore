@@ -258,14 +258,7 @@ class BERTScore:
             self.tokenizer, self.encoder = load_model(model_name_or_path, best_layer)
         self.encoder = self.encoder.to(device)
         self.rescale_base = rescale_base
-        if idf_path is not None:
-            self.idf = load_idf(idf_path)
-            if len(self.tokenizer) != self.idf.weight.size()[0]:
-                raise ValueError(
-                    'The number of vocab in `tokenizer` must be same wigh `idf` size\n'
-                    f'len(tokenizer)={len(tokenizer)}, len(idf)={self.idf.weight.size()[0]}')
-        else:
-            self.idf = None
+        self.idf = load_idf(idf_path, self.tokenizer)
 
     def __call__(self, references, candidates, batch_size=128, verbose=True):
         return self.score(references, candidates, batch_size, verbose)
@@ -330,10 +323,19 @@ def truncate_bert_layers(encoder, last_layer):
     return encoder
 
 
-def load_idf(path):
-    with open(path, encoding='utf-8') as f:
-        weight = [float(line.strip()) for line in f]
-    weight = torch.tensor([weight]).T
+def load_idf(path, tokenizer):
+    if path is None:
+        weight = torch.ones((len(tokenizer), 1), dtype=torch.float)
+    else:
+        with open(path, encoding='utf-8') as f:
+            weight = [float(line.strip()) for line in f]
+        weight = torch.tensor([weight]).T
     n_vocab = weight.size()[0]
+
+    if len(tokenizer) != n_vocab:
+        raise ValueError(
+            'The number of vocab in `tokenizer` must be same wigh `idf` size\n'
+            f'len(tokenizer)={len(tokenizer)}, len(idf)={n_vocab}')
+
     idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
     return idf
