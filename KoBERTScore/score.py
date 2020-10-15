@@ -320,6 +320,7 @@ def truncate_bert_layers(encoder, last_layer):
     encoder.encoder.layer = torch.nn.ModuleList([
         layer for layer in encoder.encoder.layer[:last_layer]
     ])
+    encoder.config.num_hidden_layers = last_layer
     return encoder
 
 
