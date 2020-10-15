@@ -197,7 +197,7 @@ def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
 
 
 def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=None,
-                          output_layer_index=-1, height=500, width=550, title=None, return_gridplot=True):
+                          output_layer_index=-1, height='auto', width='auto', title=None, return_gridplot=True):
     """
     Args:
     Examples::
@@ -242,6 +242,11 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     candi_embed = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
     pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
 
+    # set height and width
+    if height == 'auto':
+        height = max(500, 50 * refer_ids.size()[1])
+    if width == 'auto':
+        width = max(500, 50 * candi_ids.size()[1] + 50)
     p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title, height, width - 50)
     p_idf = draw_idf(bert_tokenizer, refer_ids, idf, height, width=50)
 
