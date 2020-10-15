@@ -197,7 +197,7 @@ def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
 
 
 def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=None,
-                          output_layer_index=-1, title=None):
+                          output_layer_index=-1, height=500, width=550, title=None, return_gridplot=True):
     """
     Args:
     Examples::
@@ -242,13 +242,16 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     candi_embed = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
     pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
 
-    p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title)
-    p_idf = draw_idf(bert_tokenizer, refer_ids, idf)
-    gp = gridplot([[p_cos, p_idf]])
-    return gp
+    p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title, height, width - 50)
+    p_idf = draw_idf(bert_tokenizer, refer_ids, idf, height, width=50)
+
+    if return_gridplot:
+        gp = gridplot([[p_cos, p_idf]])
+        return gp
+    return p_cos, p_idf
 
 
-def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title=None):
+def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title=None, height=500, width=500):
     refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
     candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
 
@@ -259,7 +262,7 @@ def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, 
     ]
     yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
     xrange = [f'{i}: {candi_vocab[i]}' for i in range(candi_ids.size()[1] - 2)]
-    p = figure(title=title, height=500, width=500, x_range=xrange, y_range=yrange, tooltips=tooltips)
+    p = figure(title=title, height=height, width=width, x_range=xrange, y_range=yrange, tooltips=tooltips)
     p.xaxis.axis_label_text_font_size = '13pt'
     p.yaxis.axis_label_text_font_size = '13pt'
 
@@ -291,7 +294,7 @@ def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, 
     return p
 
 
-def draw_idf(bert_tokenizer, refer_ids, idf):
+def draw_idf(bert_tokenizer, refer_ids, idf, height=500, width=50):
     if idf is None:
         n_vocab = len(bert_tokenizer)
         weight = torch.ones((n_vocab, 1), dtype=torch.float)
@@ -304,7 +307,7 @@ def draw_idf(bert_tokenizer, refer_ids, idf):
     refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
     yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
     xrange = ['IDF']
-    p = figure(height=500, width=50, x_range=xrange, y_range=yrange, tooltips=tooltips, tools=[])
+    p = figure(height=height, width=width, x_range=xrange, y_range=yrange, tooltips=tooltips, tools=[])
     p.yaxis.visible = False
 
     y = []
