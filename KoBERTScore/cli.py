@@ -61,8 +61,8 @@ def best_layer(args):
 
     if not -1 < args.rescale_base < 1:
         raise ValueError("`rescale_base` must be in [-1, 1]")
-    if args.draw_plot and args.plot_path is None:
-        raise ValueError('Set `plot_path` when use `draw_plot`')
+    if args.draw_plot and args.output_dir is None:
+        raise ValueError('Set `output_dir` when use `draw_plot`')
 
     device = args.device
     if device is None:
@@ -99,7 +99,7 @@ def best_layer(args):
 
     # Save figures
     if args.draw_plot:
-        dirname = os.path.abspath(args.plot_path)
+        dirname = os.path.abspath(args.output_dir)
         print(f'Saving figures at {dirname}')
         os.makedirs(dirname, exist_ok=True)
         warnings.filterwarnings("ignore")
