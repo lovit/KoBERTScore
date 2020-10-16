@@ -133,7 +133,7 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         return pearsonr(qualities, array)[0]
 
     R, P, F = score_from_all_layers(
-        tokenizer, model, references, candidates,
+        bert_tokenizer, bert_model, references, candidates,
         idf, rescale_base, batch_size)
 
     R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
