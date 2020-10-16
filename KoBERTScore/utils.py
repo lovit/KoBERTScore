@@ -136,9 +136,9 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         bert_tokenizer, bert_model, references, candidates,
         idf, rescale_base, batch_size)
 
-    R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
-    P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
-    F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
+    R = {layer: corr(array) for layer, array in R.items()}
+    P = {layer: corr(array) for layer, array in P.items()}
+    F = {layer: corr(array) for layer, array in F.items()}
     return R, P, F
 
 
