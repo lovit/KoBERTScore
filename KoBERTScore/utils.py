@@ -130,7 +130,10 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         qualities = np.array(qualities)
 
     def corr(array):
-        return pearsonr(qualities, array)[0]
+        indices = np.isnan(array)
+        if indices.shape[0] > 0:
+            print(f'Found {indices.shape[0]} NaN values')
+        return pearsonr(qualities[~indices], array[~indices])[0]
 
     R, P, F = score_from_all_layers(
         bert_tokenizer, bert_model, references, candidates,
