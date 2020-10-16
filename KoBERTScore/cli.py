@@ -133,7 +133,9 @@ def rescale_base(args):
 
     # Average scores
     def average(scores):
-        return sum(scores) / len(scores)
+        scores = np.array(scores)
+        indices = ~np.isnan(scores)
+        return scores[indices].mean()
 
     R, P, F = score_from_all_layers(
         tokenizer, encoder, references, candidates,
