@@ -119,6 +119,9 @@ def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_ind
     """
     device = next(bert_model.parameters()).device
     input_ids = input_ids.to(device)
+    if attention_mask is not None:
+        attention_mask = attention_mask.to(device)
+
     with torch.no_grad():
         _, _, hidden_states = bert_model(
             input_ids, attention_mask=attention_mask, output_hidden_states=True)
