@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import torch
+from bokeh.layouts import gridplot
 from bokeh.models import ColumnDataSource, LinearColorMapper
 from bokeh.models import HoverTool, SaveTool
 from bokeh.palettes import Blues256
@@ -128,6 +129,56 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
     if not isinstance(qualities, np.ndarray):
         qualities = np.array(qualities)
 
+    def corr(array):
+        return pearsonr(qualities, array)[0]
+
+    R, P, F = score_from_all_layers(
+        tokenizer, model, references, candidates,
+        idf, rescale_base, batch_size)
+
+    R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
+    P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
+    F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
+    return R, P, F
+
+
+def score_from_all_layers(bert_tokenizer, bert_model, references, candidates,
+                          idf=None, rescale_base=0, batch_size=128):
+    """
+    Args:
+        bert_tokenizer (transformers.PreTrainedTokenizer)
+        bert_model (transformers`s Pretrained models)
+        references (list of str) : True sentences
+        candidates (list of str) : Generated sentences
+        idf (torch.nn.Embedding or None) : IDF weights
+        rescale_base (float) : 0 <= rescale_base < 1
+            Adjust (R-BERTScore - base) / (1 - base)
+        batch_size (int) : Batch size, default = 128
+
+    Returns:
+        R (dict) : {layer: list of float}
+        P (dict) : {layer: list of float}
+        F (dict) : {layer: list of float}
+
+    Examples::
+        >>> from transformers import BertModel, BertTokenizer
+
+        >>> model_name = "beomi/kcbert-base"
+        >>> tokenizer = BertTokenizer.from_pretrained(model_name)
+        >>> encoder = BertModel.from_pretrained(model_name)
+
+        >>> references = [
+        >>>     '날씨는 좋고 할일은 많고 어우 연휴 끝났다',
+        >>>     '힘을 내볼까? 잘할 수 있어!',
+        >>>     '이 문장은 점수가 낮아야만 합니다']
+        >>> candidates = [
+        >>>     '날씨가 좋다 하지만 할일이 많다 일해라 인간',
+        >>>     '힘내라 잘할 수 있다',
+        >>>     '테넷봤나요? 역의역의역은역인가요?']
+
+        >>> R, P, F = score_from_all_layers(tokenizer, encoder, references, candidates)
+    """
+
     # Initialize
     n_layers = bert_model.config.num_hidden_layers + 1
     R, P, F = {}, {}, {}
@@ -143,7 +194,6 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         e = min((step + 1) * batch_size, n_examples)
         refer_batch = references[b: e]
         candi_batch = candidates[b: e]
-        qual_batch = qualities[b: e]
 
         refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, refer_batch)
         candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candi_batch)
@@ -164,12 +214,9 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
             P[layer].append(P_l.numpy())
             F[layer].append(F_l.numpy())
 
-    def corr(array):
-        return pearsonr(qualities, array)[0]
-
-    R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
-    P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
-    F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
+    R = {layer: np.concatenate(array).tolist() for layer, array in R.items()}
+    P = {layer: np.concatenate(array).tolist() for layer, array in P.items()}
+    F = {layer: np.concatenate(array).tolist() for layer, array in F.items()}
     return R, P, F
 
 
@@ -196,7 +243,7 @@ def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
 
 
 def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=None,
-                          output_layer_index=-1, title=None):
+                          output_layer_index=-1, height='auto', width='auto', title=None, return_gridplot=True):
     """
     Args:
     Examples::
@@ -241,17 +288,32 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     candi_embed = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
     pairwise_cosine = compute_pairwise_cosine(refer_embed, candi_embed)[0].numpy()
 
-    # Prepare figure
+    # set height and width
+    if height == 'auto':
+        height = max(500, 50 * refer_ids.size()[1])
+    if width == 'auto':
+        width = max(500, 50 * candi_ids.size()[1] + 50)
+    p_cos = draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title, height, width - 50)
+    p_idf = draw_idf(bert_tokenizer, refer_ids, idf, height, width=50)
+
+    if return_gridplot:
+        gp = gridplot([[p_cos, p_idf]])
+        return gp
+    return p_cos, p_idf
+
+
+def draw_pairwise_cosine(bert_tokenizer, refer_ids, candi_ids, pairwise_cosine, title=None, height=500, width=500):
+    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
+    candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
+
     tooltips = [
         ('Reference token', '@refer'),
         ('Candidate token', '@candi'),
         ('Cosine', '@cos')
     ]
-    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
-    candi_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in candi_ids[0][1: -1].numpy()]
     yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
     xrange = [f'{i}: {candi_vocab[i]}' for i in range(candi_ids.size()[1] - 2)]
-    p = figure(title=title, height=500, width=500, x_range=xrange, y_range=yrange, tooltips=tooltips)
+    p = figure(title=title, height=height, width=width, x_range=xrange, y_range=yrange, tooltips=tooltips)
     p.xaxis.axis_label_text_font_size = '13pt'
     p.yaxis.axis_label_text_font_size = '13pt'
 
@@ -280,4 +342,40 @@ def plot_bertscore_detail(reference, candidate, bert_tokenizer, bert_model, idf=
     p.text(dodge("x", -0.3, range=p.x_range),
            dodge("y", -0.1, range=p.y_range),
            text='cos_str', text_font_size='13px', source=source)
+    return p
+
+
+def draw_idf(bert_tokenizer, refer_ids, idf, height=500, width=50):
+    if idf is None:
+        n_vocab = len(bert_tokenizer)
+        weight = torch.ones((n_vocab, 1), dtype=torch.float)
+        idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
+
+    tooltips = [
+        ('Reference token', '@refer'),
+        ('IDF', '@idf')
+    ]
+    refer_vocab = [bert_tokenizer.ids_to_tokens[idx] for idx in refer_ids[0][1: -1].numpy()]
+    yrange = [f'{i}: {refer_vocab[i]}' for i in range(refer_ids.size()[1] - 2)]
+    xrange = ['IDF']
+    p = figure(height=height, width=width, x_range=xrange, y_range=yrange, tooltips=tooltips, tools=[])
+    p.yaxis.visible = False
+
+    y = []
+    refers = []
+    idf = list(idf(refer_ids[0][1: -1]).detach().numpy().reshape(-1))
+    idf_str = []
+    for i_ref, refer in enumerate(refer_ids[0][1: -1].numpy()):
+        y.append(f'{i_ref}: {refer_vocab[i_ref]}')
+        refers.append(bert_tokenizer.ids_to_tokens[refer])
+        idf_str.append(f'{idf[i_ref]:.3}')
+    x = ['IDF'] * len(y)
+    source = ColumnDataSource(data={
+        'x': x, 'y': y, 'refer': refers, 'idf': idf, 'idf_str': idf_str
+    })
+
+    p.rect('x', 'y', 0.95, 0.95, line_color=None, fill_color='white', source=source)
+    p.text(dodge("x", -0.3, range=p.x_range),
+           dodge("y", -0.1, range=p.y_range),
+           text='idf_str', text_font_size='13px', source=source)
     return p
