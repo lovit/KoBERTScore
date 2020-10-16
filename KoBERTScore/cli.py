@@ -22,6 +22,7 @@ def main():
     # Finding best layer
     parser_best_layer = subparsers.add_parser('best_layer', help='Finding best layer')
     parser_best_layer.add_argument('--model_name_or_path', type=str, required=True, help='BERT model path or name')
+    parser_best_layer.add_argument('--device', type=str, default=None, help='cpu, cuda, cuda:0, or None')
     # Will be implemented
 #     parser_best_layer.add_argument('--references', type=str, help='References path')
 #     parser_best_layer.add_argument('--candidates', type=str, help='Candidates path')
@@ -37,6 +38,7 @@ def main():
     # Find rescale base
     parser_rescale_base = subparsers.add_parser('rescale_base', help='Finding rescale base value')
     parser_rescale_base.add_argument('--model_name_or_path', type=str, required=True, help='BERT model path or name')
+    parser_rescale_base.add_argument('--device', type=str, default=None, help='cpu, cuda, cuda:0, or None')
     parser_rescale_base.add_argument('--references', type=str, help='References path')
     parser_rescale_base.add_argument('--output_path', type=str, default=None, help='Result file path')
     parser_rescale_base.add_argument('--batch_size', type=int, default=128, help='BERT embedding batch size')
@@ -61,9 +63,13 @@ def best_layer(args):
     if args.draw_plot and args.plot_path is None:
         raise ValueError('Set `plot_path` when use `draw_plot`')
 
+    device = args.device
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     # Load pretrained BERT model and tokenizer
     tokenizer = BertTokenizer.from_pretrained(args.model_name_or_path)
-    encoder = BertModel.from_pretrained(args.model_name_or_path)
+    encoder = BertModel.from_pretrained(args.model_name_or_path).to(device)
 
     # Load STS corpus
     corpus = Korpora.load('korsts')
@@ -104,9 +110,13 @@ def best_layer(args):
 def rescale_base(args):
     print(f'Finding rescale base BERT layer with {args.model_name_or_path}')
 
+    device = args.device
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
     # Load pretrained BERT model and tokenizer
     tokenizer = BertTokenizer.from_pretrained(args.model_name_or_path)
-    encoder = BertModel.from_pretrained(args.model_name_or_path)
+    encoder = BertModel.from_pretrained(args.model_name_or_path).to(device)
 
     # Load references
     with open(args.references, encoding='utf-8') as f:
