@@ -1,6 +1,7 @@
 import argparse
 import os
 import numpy as np
+import torch
 import warnings
 from bokeh.io import save
 from Korpora import Korpora
