@@ -45,9 +45,8 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
 
     # BERT embedding
-    device = next(bert_model.parameters()).device
-    refer_embeds = bert_forwarding(bert_model, refer_ids.to(device), refer_attention_mask.to(device), output_layer_index).cpu()
-    candi_embeds = bert_forwarding(bert_model, candi_ids.to(device), candi_attention_mask.to(device), output_layer_index).cpu()
+    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask.to(device), output_layer_index)
+    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask.to(device), output_layer_index)
 
     # Compute bert RPF
     R, P, F = compute_RPF(
@@ -102,7 +101,7 @@ def sents_to_tensor(bert_tokenizer, input_sents):
     return padded_input_ids, attention_mask, token_mask
 
 
-def bert_forwarding(bert_model, input_ids=None, attention_mask=None, output_layer_index=-1):
+def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_index=-1):
     """
     Args:
         bert_model (transformers`s Pretrained models)
@@ -118,12 +117,14 @@ def bert_forwarding(bert_model, input_ids=None, attention_mask=None, output_laye
             K : maximum sequence length in `input_ids`
             D : BERT embedding dim
     """
+    device = next(bert_model.parameters()).device
+    input_ids = input_ids.to(device)
     with torch.no_grad():
         _, _, hidden_states = bert_model(
             input_ids, attention_mask=attention_mask, output_hidden_states=True)
     if output_layer_index == 'all':
-        return hidden_states
-    return hidden_states[output_layer_index]
+        return hidden_states.cpu()
+    return hidden_states[output_layer_index].cpu()
 
 
 def compute_RPF(refer_embeds, candi_embeds, refer_weight_mask, candi_weight_mask,
