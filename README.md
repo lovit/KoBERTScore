@@ -98,6 +98,14 @@ kobertscore best_layer \
   --output_dir .
 ```
 
+### Finding rescale base
+```
+kobertscore rescale_base \
+  --model_name_or_path beomi/kcbert-base \
+  --references path/to/references.txt \
+  --output_path MODEL_NAME_base
+```
+
 ## Best layer
 
 ### KcBERT + KorSTS
