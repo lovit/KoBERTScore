@@ -129,6 +129,56 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
     if not isinstance(qualities, np.ndarray):
         qualities = np.array(qualities)
 
+    def corr(array):
+        return pearsonr(qualities, array)[0]
+
+    R, P, F = score_from_all_layers(
+        tokenizer, model, references, candidates,
+        idf, rescale_base, batch_size)
+
+    R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
+    P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
+    F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
+    return R, P, F
+
+
+def score_from_all_layers(bert_tokenizer, bert_model, references, candidates,
+                          idf=None, rescale_base=0, batch_size=128):
+    """
+    Args:
+        bert_tokenizer (transformers.PreTrainedTokenizer)
+        bert_model (transformers`s Pretrained models)
+        references (list of str) : True sentences
+        candidates (list of str) : Generated sentences
+        idf (torch.nn.Embedding or None) : IDF weights
+        rescale_base (float) : 0 <= rescale_base < 1
+            Adjust (R-BERTScore - base) / (1 - base)
+        batch_size (int) : Batch size, default = 128
+
+    Returns:
+        R (dict) : {layer: list of float}
+        P (dict) : {layer: list of float}
+        F (dict) : {layer: list of float}
+
+    Examples::
+        >>> from transformers import BertModel, BertTokenizer
+
+        >>> model_name = "beomi/kcbert-base"
+        >>> tokenizer = BertTokenizer.from_pretrained(model_name)
+        >>> encoder = BertModel.from_pretrained(model_name)
+
+        >>> references = [
+        >>>     '날씨는 좋고 할일은 많고 어우 연휴 끝났다',
+        >>>     '힘을 내볼까? 잘할 수 있어!',
+        >>>     '이 문장은 점수가 낮아야만 합니다']
+        >>> candidates = [
+        >>>     '날씨가 좋다 하지만 할일이 많다 일해라 인간',
+        >>>     '힘내라 잘할 수 있다',
+        >>>     '테넷봤나요? 역의역의역은역인가요?']
+
+        >>> R, P, F = score_from_all_layers(tokenizer, encoder, references, candidates)
+    """
+
     # Initialize
     n_layers = bert_model.config.num_hidden_layers + 1
     R, P, F = {}, {}, {}
@@ -144,7 +194,6 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
         e = min((step + 1) * batch_size, n_examples)
         refer_batch = references[b: e]
         candi_batch = candidates[b: e]
-        qual_batch = qualities[b: e]
 
         refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, refer_batch)
         candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candi_batch)
@@ -165,12 +214,9 @@ def correlation(bert_tokenizer, bert_model, references, candidates, qualities,
             P[layer].append(P_l.numpy())
             F[layer].append(F_l.numpy())
 
-    def corr(array):
-        return pearsonr(qualities, array)[0]
-
-    R = {layer: corr(np.concatenate(array)) for layer, array in R.items()}
-    P = {layer: corr(np.concatenate(array)) for layer, array in P.items()}
-    F = {layer: corr(np.concatenate(array)) for layer, array in F.items()}
+    R = {layer: np.concatenate(array).tolist() for layer, array in R.items()}
+    P = {layer: np.concatenate(array).tolist() for layer, array in P.items()}
+    F = {layer: np.concatenate(array).tolist() for layer, array in F.items()}
     return R, P, F
 
 
