@@ -95,7 +95,7 @@ kobertscore best_layer \
   --corpus korsts \
   --model_name_or_path beomi/kcbert-base \
   --draw_plot \
-  --plot_path .
+  --output_dir .
 ```
 
 ## Best layer

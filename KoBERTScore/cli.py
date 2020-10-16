@@ -30,7 +30,7 @@ def main():
     parser_best_layer.add_argument('--rescale_base', type=float, default=0.0, help='Rescale base value')
     parser_best_layer.add_argument('--batch_size', type=int, default=128, help='BERT embedding batch size')
     parser_best_layer.add_argument('--draw_plot', dest='draw_plot', action='store_true')
-    parser_best_layer.add_argument('--plot_path', type=str, default=None, help='Directory for saving figures')
+    parser_best_layer.add_argument('--output_dir', type=str, default=None, help='Directory for saving figures')
     parser_best_layer.set_defaults(func=best_layer)
 
     args = parser.parse_args()
