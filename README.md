@@ -106,6 +106,15 @@ kobertscore rescale_base \
   --output_path MODEL_NAME_base
 ```
 
+### Compute average L2 norm of every BERT layer output
+```
+kobertscore l2norm \
+  --model_name_or_path beomi/kcbert-base \
+  --references path/to/references \
+  --output_path kcbert-l2norm \
+  --draw_plot
+```
+
 ## Best layer
 
 ### KcBERT + KorSTS
