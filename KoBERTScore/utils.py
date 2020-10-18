@@ -229,7 +229,7 @@ def lineplot(array, legend=None, y_name='', title=None,  color='navy', p=None):
         tooltips = [('layer', '$x'), (y_name, '$y')]
         tools = [HoverTool(names=["circle"]), SaveTool()]
 
-        p = figure(height=600, width=600, tooltips=tooltips, tools=tools)
+        p = figure(height=400, width=400, tooltips=tooltips, tools=tools)
         p.xaxis.axis_label = 'Layer'
         p.yaxis.axis_label = y_name
 
