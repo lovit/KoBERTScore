@@ -8,7 +8,7 @@ from Korpora import Korpora
 from transformers import BertModel, BertTokenizer
 
 from .about import __name__, __version__
-from .tasks import find_best_layer
+from .tasks import find_best_layer, compute_average_l2_norm
 from .utils import train_idf, idf_numpy_to_embed, score_from_all_layers
 
 
@@ -46,6 +46,16 @@ def main():
     # Will be implemented
 #     parser_rescale_base.add_argument('--idf_path', type=str, default=None, help='Pretrained IDF path')
     parser_rescale_base.set_defaults(func=rescale_base)
+
+    # Compute average l2 norm of every BERT layer out
+    parser_l2norm = subparsers.add_parser('l2norm', help='Compute average l2 norm of every BERT layer out')
+    parser_l2norm.add_argument('--model_name_or_path', type=str, required=True, help='BERT model path or name')
+    parser_l2norm.add_argument('--device', type=str, default=None, help='cpu, cuda, cuda:0, or None')
+    parser_l2norm.add_argument('--references', type=str, help='References path')
+    parser_l2norm.add_argument('--output_path', type=str, default=None, help='Result file path')
+    parser_l2norm.add_argument('--batch_size', type=int, default=128, help='BERT embedding batch size')
+    parser_l2norm.add_argument('--draw_plot', dest='draw_plot', action='store_true')
+    parser_l2norm.set_defaults(func=average_l2_norm)
 
     args = parser.parse_args()
     task_function = args.func
@@ -157,9 +167,52 @@ def rescale_base(args):
 
     # Write report
     dirname = os.path.abspath(os.path.dirname(args.output_path))
+    print(f'Saving rescale base at {dirname}')
     os.makedirs(dirname, exist_ok=True)
     with open(args.output_path, 'w', encoding='utf-8') as f:
         f.write(report)
+
+
+def average_l2_norm(args):
+    print(f'Compute average L2 norm in every layer of BERT {args.model_name_or_path}')
+
+    device = args.device
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    # Load pretrained BERT model and tokenizer
+    tokenizer = BertTokenizer.from_pretrained(args.model_name_or_path)
+    encoder = BertModel.from_pretrained(args.model_name_or_path).to(device)
+
+    # Load references
+    with open(args.references, encoding='utf-8') as f:
+        references = [line.strip() for line in f]
+
+    layer_l2norm, figure = compute_average_l2_norm(
+        tokenizer, encoder, references,
+        model_name=args.model_name_or_path.split('/')[-1],
+        batch_size=args.batch_size, draw_plot=args.draw_plot)
+
+    # Reporting
+    form = '| {} | {} |'
+    report = [form.format('layer', 'L2 norm'), form.format('---', '---')]
+    for layer, l2norm in enumerate(layer_l2norm):
+        report.append(form.format('{:2}'.format(layer), l2norm))
+    report = '\n'.join(report)
+    print(report)
+
+    # Write report
+    dirname = os.path.abspath(os.path.dirname(args.output_path))
+    print(f'Saving L2 norm at {dirname}')
+    os.makedirs(dirname, exist_ok=True)
+    with open(args.output_path, 'w', encoding='utf-8') as f:
+        f.write(report)
+
+    if args.draw_plot:
+        dirname = os.path.abspath(args.output_path)
+        print(f'Saving figure at {dirname}')
+        warnings.filterwarnings("ignore")
+        save(figure, f'{args.output_path}.html')
 
 
 if __name__ == '__main__':
