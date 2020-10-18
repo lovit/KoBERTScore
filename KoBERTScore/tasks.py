@@ -1,4 +1,5 @@
 import numpy as np
+from bokeh.layouts import gridplot
 
 from .utils import correlation, lineplot
 
@@ -70,6 +71,12 @@ def find_best_layer(bert_tokenizer, bert_model, references, candidates, qualitie
             'P': lineplot(P, legend=model_name, y_name='P', title=f'{prefix} P, b={rescale_base:.4}'.strip()),
             'F': lineplot(F, legend=model_name, y_name='F', title=f'{prefix} F, b={rescale_base:.4}'.strip())
         }
+        rpf = gridplot([[
+            lineplot(R, legend=model_name, y_name='R', title=f'{prefix} R, b={rescale_base:.4}'.strip()),
+            lineplot(P, legend=model_name, y_name='P', title=f'{prefix} P, b={rescale_base:.4}'.strip()),
+            lineplot(F, legend=model_name, y_name='F', title=f'{prefix} F, b={rescale_base:.4}'.strip())
+        ]])
+        figures['RPF'] = rpf
 
     informations = {'R': R, 'P': P, 'F': F, 'figures': figures}
 

@@ -106,6 +106,7 @@ def best_layer(args):
         save(informations['figures']['R'], f'{dirname}/R.html')
         save(informations['figures']['P'], f'{dirname}/P.html')
         save(informations['figures']['F'], f'{dirname}/F.html')
+        save(informations['figures']['RPF'], f'{dirname}/RPF.html')
 
 
 def rescale_base(args):
