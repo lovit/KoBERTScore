@@ -292,7 +292,7 @@ class BERTScore:
                 self.tokenizer, self.encoder,
                 refer_batch, candi_batch,
                 idf=self.idf, rescale_base=self.rescale_base)
-            F += F_batch.numpy().tolist()
+            F += F_batch.detach().numpy().tolist()
         return F
 
 
