@@ -45,8 +45,8 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
 
     # BERT embedding
-    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask.to(device), output_layer_index)
-    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask.to(device), output_layer_index)
+    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
+    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
 
     # Compute bert RPF
     R, P, F = compute_RPF(
