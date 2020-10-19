@@ -123,9 +123,9 @@ Tested correlation between BERTScore and [KorSTS](https://github.com/ko-nlp/Korp
 
 | model | layer index | correlation (F)|
 | --- | --- | --- |
-| kcbert-base | 4 | 0.622 |
-| koelectra | 12 | 0.334 |
-| kobert | 2 | 0.190 |
-| distilkobert | 12 | 0.098 |
+| 'beomi/kcbert-base' | 4 | 0.622 |
+| 'monologg/distilkobert' | 12 | 0.334 |
+| 'monologg/kobert' | 2 | 0.190 |
+| 'monologg/koelectra-base-v2-discriminator' | 12 | 0.098 |
 
 ![](resources/kcbert_korsts.png)
