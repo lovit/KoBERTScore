@@ -109,7 +109,10 @@ def best_layer(args):
 
     # Save figures
     if args.draw_plot:
-        dirname = os.path.abspath(args.output_dir)
+        output_dir = args.output_dir
+        if output_dir is None:
+            output_dir = os.getcwd()
+        dirname = os.path.abspath(output_dir)
         print(f'Saving figures at {dirname}')
         os.makedirs(dirname, exist_ok=True)
         warnings.filterwarnings("ignore")
@@ -166,11 +169,12 @@ def rescale_base(args):
     print(report)
 
     # Write report
-    dirname = os.path.abspath(os.path.dirname(args.output_path))
-    print(f'Saving rescale base at {dirname}')
-    os.makedirs(dirname, exist_ok=True)
-    with open(args.output_path, 'w', encoding='utf-8') as f:
-        f.write(report)
+    if args.output_path is not None:
+        dirname = os.path.abspath(os.path.dirname(args.output_path))
+        print(f'Saving rescale base at {dirname}')
+        os.makedirs(dirname, exist_ok=True)
+        with open(args.output_path, 'w', encoding='utf-8') as f:
+            f.write(report)
 
 
 def average_l2_norm(args):
@@ -202,11 +206,12 @@ def average_l2_norm(args):
     print(report)
 
     # Write report
-    dirname = os.path.abspath(os.path.dirname(args.output_path))
-    print(f'Saving L2 norm at {dirname}')
-    os.makedirs(dirname, exist_ok=True)
-    with open(args.output_path, 'w', encoding='utf-8') as f:
-        f.write(report)
+    if args.output_path is not None:
+        dirname = os.path.abspath(os.path.dirname(args.output_path))
+        print(f'Saving L2 norm at {dirname}')
+        os.makedirs(dirname, exist_ok=True)
+        with open(args.output_path, 'w', encoding='utf-8') as f:
+            f.write(report)
 
     if args.draw_plot:
         dirname = os.path.abspath(args.output_path)
