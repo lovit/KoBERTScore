@@ -297,6 +297,51 @@ class BERTScore:
             F += F_batch.detach().numpy().tolist()
         return F
 
+    def plot_bertscore_detail(self, reference, candidate,
+        idf=None, height='auto', width='auto', title=None, return_gridplot=True):
+        """
+        Args:
+            reference (str) : Reference sentence
+            candidate (str) : Candidate sentence
+            idf (torch.nn.Embedding) : custom IDF weight
+                If None, use BERTScore attribute IDF weight
+            height (int or str) : Figure height
+                If `auto`, it automatically determine the height of figure
+                considering the number of tokens in `reference`
+            width (int or str) : Figure width
+                If `auto`, it automatically determine the height of figure
+                considering the number of tokens in `candidate`
+            title (str or None) : Figure title
+            return_gridplot (Boolean) :
+                If True, it returns gridplot formed figure
+                Else, it returns tuple of figures (cos, idf)
+
+        Returns:
+            figure (bokeh.figure or (bokeh.figure, bokeh.figure)
+
+        Examples::
+            Loading BERT manually
+
+                >>> from bokeh.plotting import show
+                >>> from KoBERTScore import BERTScore
+
+                >>> bertscore = BERTScore("bert-base-uncased")
+                >>> reference = '날씨는 좋고 할일은 많고 어우 연휴 끝났다'
+                >>> candidate = '날씨가 좋다 하지만 할일이 많다 일해라 인간'
+                >>> p = bertscore.plot_bertscore_detail(reference, candidate)
+                >>> show(p)
+        """
+        if not isinstance(reference, str) or not isinstance(candidate, str):
+            raise ValueError('`reference` and `candidate` must be str type')
+        if idf is None:
+            idf = self.idf
+
+        from .tasks import plot_bertscore_detail
+        figure = plot_bertscore_detail(
+            reference, candidate, self.tokenizer, self.encoder, idf,
+            -1, height, width, title, return_gridplot)
+        return figure
+
 
 MODEL_TO_BEST_LAYER = {
     'beomi/kcbert-base': 4,
