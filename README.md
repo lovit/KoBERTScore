@@ -117,8 +117,15 @@ kobertscore l2norm \
   --draw_plot
 ```
 
-## Best layer
+## Performance and best-layer index of Korean BERT models
 
-### KcBERT + KorSTS
-- layer index = 4 (0 is token embedding layer)
+Tested correlation between BERTScore and [KorSTS](https://github.com/ko-nlp/Korpora#korsts) score
+
+| model | layer index | correlation (F)|
+| --- | --- | --- |
+| kcbert-base | 4 | 0.622 |
+| koelectra | 12 | 0.334 |
+| kobert | 2 | 0.190 |
+| distilkobert | 12 | 0.098 |
+
 ![](resources/kcbert_korsts.png)
