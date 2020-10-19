@@ -264,16 +264,22 @@ class BERTScore:
         self.rescale_base = rescale_base
         self.idf = load_idf(idf_path, self.tokenizer)
 
-    def __call__(self, references, candidates, batch_size=128, verbose=True):
-        return self.score(references, candidates, batch_size, verbose)
+    def __call__(self, references, candidates, batch_size=128, retrain_idf=True, verbose=True):
+        return self.score(references, candidates, batch_size, retrain_idf, verbose)
 
-    def score(self, references, candidates, batch_size=128, verbose=True):
+    def score(self, references, candidates, batch_size=128, retrain_idf=True, verbose=True):
         n_examples = len(references)
         n_batch = math.ceil(n_examples / batch_size)
         if verbose:
             step_iterator = tqdm(range(n_batch), desc='Calculating BERTScore', total=n_batch)
         else:
             step_iterator = range(n_batch)
+
+        if retrain_idf:
+            idf = train_idf(self.tokenizer, references, batch_size=1000, verbose=verbose)
+            idf = idf_numpy_to_embed(idf)
+        else:
+            idf = self.idf
 
         F = []
         for step in step_iterator:
