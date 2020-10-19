@@ -148,7 +148,7 @@ def compute_average_l2_norm(bert_tokenizer, bert_model, references, model_name=N
     layer_l2norm = [norm / weight for norm, weight in zip(layer_l2norm, layer_weight)]
 
 
-    figures = None
+    figure = None
     if draw_plot:
         prefix = '{}'.format(model_name if isinstance(model_name, str) else '')
         figure = lineplot(np.array(layer_l2norm), legend=model_name, y_name='L2 norm', title=f'Average L2-norm')
