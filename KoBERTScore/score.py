@@ -254,7 +254,7 @@ def rescaling(scores, base):
 
 
 class BERTScore:
-    def __init__(self, model_name_or_path, best_layer=-1, idf_path=None, rescale_base=0, device=None):
+    def __init__(self, model_name_or_path='beomi/kcbert-base', best_layer=-1, idf_path=None, rescale_base=0, device=None):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
