@@ -8,8 +8,8 @@ from Korpora import Korpora
 from transformers import BertModel, BertTokenizer
 
 from .about import __name__, __version__
-from .tasks import find_best_layer, compute_average_l2_norm
-from .utils import train_idf, idf_numpy_to_embed, score_from_all_layers
+from .score import train_idf, idf_numpy_to_embed
+from .tasks import find_best_layer, compute_average_l2_norm, score_from_all_layers
 
 
 def main():
