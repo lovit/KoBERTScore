@@ -345,9 +345,9 @@ class BERTScore:
 
 MODEL_TO_BEST_LAYER = {
     'beomi/kcbert-base': 4,
-    'monologg/kobert': -1,        # need experiments
-    'monologg/distilkobert': -1,  # need experiments
-    'monologg/koelectra-base-v2-discriminator': -1  # need experiments
+    'monologg/kobert': 2,
+    'monologg/distilkobert': 12,
+    'monologg/koelectra-base-v2-discriminator': 12
 }
 
 
