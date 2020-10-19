@@ -1,7 +1,9 @@
 import math
+import numpy as np
 import os
 import torch
 import torch.nn.functional as F
+from collections import Counter
 from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
 
@@ -349,4 +351,62 @@ def load_idf(path, tokenizer):
             f'len(tokenizer)={len(tokenizer)}, len(idf)={n_vocab}')
 
     idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
+    return idf
+
+
+def idf_numpy_to_embed(idf_array):
+    """
+    Args:
+        idf_array (numpy.ndarray) : shape=(n_vocab,)
+
+    Returns:
+        idf_embed (torch.nn.Embedding) : size=(n_vocab, 1)
+
+    Examples::
+        >>> import numpy as np
+        >>> idf = np.random.random_sample(10000)
+        >>> idf_embed = idf_numpy_to_embed(idf)
+        >>> type(idf_embed)
+        $ torch.nn.modules.sparse.Embedding
+    """
+    idf = torch.tensor([idf_array]).T
+    idf_embed = torch.nn.Embedding(idf.size()[0], 1, _weight=idf)
+    idf_embed.weight.requires_grad = False
+    return idf_embed
+
+
+def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
+    """
+    Train IDF vector with Laplace (add one) smoothing
+
+    Args:
+        bert_tokenizer (transformers.PreTrainedTokenizer)
+        references (list of str) : True sentences
+        batch_size (int)
+        verbose (Boolean)
+
+    Returns:
+        idf (numpy.ndarray) : shape = (bert_tokenizer.vocab_size,)
+    """
+    n_sents = len(references)
+    counter = Counter()
+    begin_index = list(range(0, n_sents, batch_size))
+
+    if verbose:
+        iterator = tqdm(begin_index, total=round(n_sents / batch_size), desc='Train IDF')
+    else:
+        iterator = begin_index
+
+    for i in iterator:
+        encoding = bert_tokenizer.batch_encode_plus(
+            references[i: i + batch_size],
+            add_special_tokens=False)
+        subcounter = Counter(idx for sent in encoding['input_ids'] for idx in sent)
+        counter.update(subcounter)
+
+    idf = np.ones(bert_tokenizer.vocab_size)
+    indices, df = zip(*counter.items())
+    idf[np.array(indices)] += np.array(df)
+    idf = 1 / idf
+    idf[np.array(bert_tokenizer.all_special_ids, dtype=np.int)] = 0
     return idf
