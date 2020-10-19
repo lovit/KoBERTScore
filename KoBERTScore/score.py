@@ -1,7 +1,9 @@
 import math
+import numpy as np
 import os
 import torch
 import torch.nn.functional as F
+from collections import Counter
 from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
 
@@ -45,8 +47,8 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
 
     # BERT embedding
-    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask.to(device), output_layer_index)
-    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask.to(device), output_layer_index)
+    refer_embeds = bert_forwarding(bert_model, refer_ids, refer_attention_mask, output_layer_index)
+    candi_embeds = bert_forwarding(bert_model, candi_ids, candi_attention_mask, output_layer_index)
 
     # Compute bert RPF
     R, P, F = compute_RPF(
@@ -252,7 +254,7 @@ def rescaling(scores, base):
 
 
 class BERTScore:
-    def __init__(self, model_name_or_path, best_layer=-1, idf_path=None, rescale_base=0, device=None):
+    def __init__(self, model_name_or_path='beomi/kcbert-base', best_layer=-1, idf_path=None, rescale_base=0, device=None):
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
@@ -264,16 +266,22 @@ class BERTScore:
         self.rescale_base = rescale_base
         self.idf = load_idf(idf_path, self.tokenizer)
 
-    def __call__(self, references, candidates, batch_size=128, verbose=True):
-        return self.score(references, candidates, batch_size, verbose)
+    def __call__(self, references, candidates, batch_size=128, retrain_idf=True, verbose=True):
+        return self.score(references, candidates, batch_size, retrain_idf, verbose)
 
-    def score(self, references, candidates, batch_size=128, verbose=True):
+    def score(self, references, candidates, batch_size=128, retrain_idf=True, verbose=True):
         n_examples = len(references)
         n_batch = math.ceil(n_examples / batch_size)
         if verbose:
             step_iterator = tqdm(range(n_batch), desc='Calculating BERTScore', total=n_batch)
         else:
             step_iterator = range(n_batch)
+
+        if retrain_idf:
+            idf = train_idf(self.tokenizer, references, batch_size=1000, verbose=verbose)
+            idf = idf_numpy_to_embed(idf)
+        else:
+            idf = self.idf
 
         F = []
         for step in step_iterator:
@@ -286,15 +294,60 @@ class BERTScore:
                 self.tokenizer, self.encoder,
                 refer_batch, candi_batch,
                 idf=self.idf, rescale_base=self.rescale_base)
-            F += F_batch.numpy().tolist()
+            F += F_batch.detach().numpy().tolist()
         return F
+
+    def plot_bertscore_detail(self, reference, candidate,
+        idf=None, height='auto', width='auto', title=None, return_gridplot=True):
+        """
+        Args:
+            reference (str) : Reference sentence
+            candidate (str) : Candidate sentence
+            idf (torch.nn.Embedding) : custom IDF weight
+                If None, use BERTScore attribute IDF weight
+            height (int or str) : Figure height
+                If `auto`, it automatically determine the height of figure
+                considering the number of tokens in `reference`
+            width (int or str) : Figure width
+                If `auto`, it automatically determine the height of figure
+                considering the number of tokens in `candidate`
+            title (str or None) : Figure title
+            return_gridplot (Boolean) :
+                If True, it returns gridplot formed figure
+                Else, it returns tuple of figures (cos, idf)
+
+        Returns:
+            figure (bokeh.figure or (bokeh.figure, bokeh.figure)
+
+        Examples::
+            Loading BERT manually
+
+                >>> from bokeh.plotting import show
+                >>> from KoBERTScore import BERTScore
+
+                >>> bertscore = BERTScore("bert-base-uncased")
+                >>> reference = '날씨는 좋고 할일은 많고 어우 연휴 끝났다'
+                >>> candidate = '날씨가 좋다 하지만 할일이 많다 일해라 인간'
+                >>> p = bertscore.plot_bertscore_detail(reference, candidate)
+                >>> show(p)
+        """
+        if not isinstance(reference, str) or not isinstance(candidate, str):
+            raise ValueError('`reference` and `candidate` must be str type')
+        if idf is None:
+            idf = self.idf
+
+        from .tasks import plot_bertscore_detail
+        figure = plot_bertscore_detail(
+            reference, candidate, self.tokenizer, self.encoder, idf,
+            -1, height, width, title, return_gridplot)
+        return figure
 
 
 MODEL_TO_BEST_LAYER = {
     'beomi/kcbert-base': 4,
-    'monologg/kobert': -1,        # need experiments
-    'monologg/distilkobert': -1,  # need experiments
-    'monologg/koelectra-base-v2-discriminator': -1  # need experiments
+    'monologg/kobert': 2,
+    'monologg/distilkobert': 12,
+    'monologg/koelectra-base-v2-discriminator': 12
 }
 
 
@@ -343,4 +396,62 @@ def load_idf(path, tokenizer):
             f'len(tokenizer)={len(tokenizer)}, len(idf)={n_vocab}')
 
     idf = torch.nn.Embedding(n_vocab, 1, _weight=weight)
+    return idf
+
+
+def idf_numpy_to_embed(idf_array):
+    """
+    Args:
+        idf_array (numpy.ndarray) : shape=(n_vocab,)
+
+    Returns:
+        idf_embed (torch.nn.Embedding) : size=(n_vocab, 1)
+
+    Examples::
+        >>> import numpy as np
+        >>> idf = np.random.random_sample(10000)
+        >>> idf_embed = idf_numpy_to_embed(idf)
+        >>> type(idf_embed)
+        $ torch.nn.modules.sparse.Embedding
+    """
+    idf = torch.tensor([idf_array]).T
+    idf_embed = torch.nn.Embedding(idf.size()[0], 1, _weight=idf)
+    idf_embed.weight.requires_grad = False
+    return idf_embed
+
+
+def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
+    """
+    Train IDF vector with Laplace (add one) smoothing
+
+    Args:
+        bert_tokenizer (transformers.PreTrainedTokenizer)
+        references (list of str) : True sentences
+        batch_size (int)
+        verbose (Boolean)
+
+    Returns:
+        idf (numpy.ndarray) : shape = (bert_tokenizer.vocab_size,)
+    """
+    n_sents = len(references)
+    counter = Counter()
+    begin_index = list(range(0, n_sents, batch_size))
+
+    if verbose:
+        iterator = tqdm(begin_index, total=round(n_sents / batch_size), desc='Train IDF')
+    else:
+        iterator = begin_index
+
+    for i in iterator:
+        encoding = bert_tokenizer.batch_encode_plus(
+            references[i: i + batch_size],
+            add_special_tokens=False)
+        subcounter = Counter(idx for sent in encoding['input_ids'] for idx in sent)
+        counter.update(subcounter)
+
+    idf = np.ones(bert_tokenizer.vocab_size)
+    indices, df = zip(*counter.items())
+    idf[np.array(indices)] += np.array(df)
+    idf = 1 / idf
+    idf[np.array(bert_tokenizer.all_special_ids, dtype=np.int)] = 0
     return idf
