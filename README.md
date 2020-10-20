@@ -1,6 +1,6 @@
 # Ko-BERTScore
 
-BERTScore using pretrained Korean BERT
+BERTScore using pretrained Korean BERT. This package provides re-implemented version of BERTScore.
 
 ## Install
 
@@ -129,3 +129,6 @@ Tested correlation between BERTScore and [KorSTS](https://github.com/ko-nlp/Korp
 | 'monologg/koelectra-base-v2-discriminator' | 12 | 0.098 |
 
 ![](resources/kcbert_korsts.png)
+
+## Reference
+- Zhang, T., Kishore, V., Wu, F., Weinberger, K. Q., & Artzi, Y. (2019). [Bertscore: Evaluating text generation with bert.](https://arxiv.org/abs/1904.09675) arXiv preprint arXiv:1904.09675.
