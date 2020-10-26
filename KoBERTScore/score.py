@@ -42,6 +42,9 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
            tensor([0.5252, 0.8333, 0.8768, 0.6904, 0.8235]),
            tensor([0.5721, 0.8134, 0.8768, 0.6904, 0.7934]))
     """
+    if not (-1 < rescale_base < 1):
+        raise ValueError('`rescale_base` must be in (-1, 1)')
+
     # tokenization
     refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, references)
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
@@ -255,6 +258,9 @@ def rescaling(scores, base):
 
 class BERTScore:
     def __init__(self, model_name_or_path='beomi/kcbert-base', best_layer=-1, idf_path=None, rescale_base=0, device=None):
+        if not (-1 < rescale_base < 1):
+            raise ValueError('`rescale_base` must be in (-1, 1)')
+
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
