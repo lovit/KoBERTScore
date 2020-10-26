@@ -264,7 +264,6 @@ class BERTScore:
     def __init__(self, model_name_or_path='beomi/kcbert-base', best_layer=-1, idf_path=None, rescale_base=0, device=None):
         if not (-1 < rescale_base < 1):
             raise ValueError('`rescale_base` must be in (-1, 1)')
-
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         self.device = device
