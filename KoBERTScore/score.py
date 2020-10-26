@@ -45,6 +45,10 @@ def bert_score(bert_tokenizer, bert_model, references, candidates,
     if not (-1 < rescale_base < 1):
         raise ValueError('`rescale_base` must be in (-1, 1)')
 
+    n_layers = len(bert_model.encoder.layer)
+    if n_layers < output_layer_index:
+        raise ValueError(f'Out of index. `bert_model` has {n_layers} layers. Check `output_layer_index`')
+
     # tokenization
     refer_ids, refer_attention_mask, refer_weight_mask = sents_to_tensor(bert_tokenizer, references)
     candi_ids, candi_attention_mask, candi_weight_mask = sents_to_tensor(bert_tokenizer, candidates)
@@ -380,6 +384,10 @@ def load_model(model_name_or_path, best_layer=-1):
 
 
 def truncate_bert_layers(encoder, last_layer):
+    n_layers = len(encoder.encoder.layer)
+    if n_layers < last_layer:
+        raise ValueError(f'Out of index. `bert_model` has {n_layers} layers. Check `best_layer`')
+
     encoder.encoder.layer = torch.nn.ModuleList([
         layer for layer in encoder.encoder.layer[:last_layer]
     ])
