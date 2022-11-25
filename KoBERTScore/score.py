@@ -93,7 +93,8 @@ def sents_to_tensor(bert_tokenizer, input_sents):
                    [0, 1, 1, 1, 0, 0, 0],
                    [0, 1, 1, 1, 0, 0, 0]]))
     """
-    inputs = bert_tokenizer.batch_encode_plus(input_sents, padding=True)
+    inputs = bert_tokenizer.batch_encode_plus(input_sents, padding=True, truncation=True) # to prevent error caused by longer inputs 
+    # inputs = bert_tokenizer.batch_encode_plus(input_sents, padding=True)
     padded_input_ids = torch.LongTensor(inputs['input_ids'])
     attention_mask = torch.LongTensor(inputs['attention_mask'])
 
@@ -125,8 +126,9 @@ def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_ind
         attention_mask = attention_mask.to(device)
 
     with torch.no_grad():
-        _, _, hidden_states = bert_model(
-            input_ids, attention_mask=attention_mask, output_hidden_states=True)
+        hidden_states = bert_model( input_ids, attention_mask=attention_mask, output_hidden_states=True).hidden_states # recent versions allows attribute access.
+        # _, _, hidden_states = bert_model(
+        #     input_ids, attention_mask=attention_mask, output_hidden_states=True)
     if output_layer_index == 'all':
         return [h.cpu() for h in hidden_states]
     return hidden_states[output_layer_index].cpu()
