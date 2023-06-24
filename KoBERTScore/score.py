@@ -126,7 +126,8 @@ def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_ind
 
     with torch.no_grad():
         _, _, hidden_states = bert_model(
-            input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict=False
+        )
     if output_layer_index == 'all':
         return [h.cpu() for h in hidden_states]
     return hidden_states[output_layer_index].cpu()
