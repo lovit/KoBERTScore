@@ -126,7 +126,7 @@ def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_ind
 
     with torch.no_grad():
         _, _, hidden_states = bert_model(
-            input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            input_ids, attention_mask=attention_mask, output_hidden_states=True, return_dict = False)
     if output_layer_index == 'all':
         return [h.cpu() for h in hidden_states]
     return hidden_states[output_layer_index].cpu()
@@ -414,7 +414,7 @@ def idf_numpy_to_embed(idf_array):
         >>> type(idf_embed)
         $ torch.nn.modules.sparse.Embedding
     """
-    idf = torch.tensor([idf_array]).T
+    idf = torch.tensor(idf_array).unsqueeze(0).T
     idf_embed = torch.nn.Embedding(idf.size()[0], 1, _weight=idf)
     idf_embed.weight.requires_grad = False
     return idf_embed
