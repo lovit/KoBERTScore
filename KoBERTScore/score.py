@@ -3,6 +3,8 @@ import numpy as np
 import os
 import torch
 import torch.nn.functional as F
+from torch.utils.data import DataLoader
+
 from collections import Counter
 from transformers import BertModel, BertTokenizer
 from tqdm import tqdm
@@ -126,7 +128,8 @@ def bert_forwarding(bert_model, input_ids, attention_mask=None, output_layer_ind
 
     with torch.no_grad():
         _, _, hidden_states = bert_model(
-            input_ids, attention_mask=attention_mask, output_hidden_states=True)
+            input_ids, attention_mask=attention_mask, output_hidden_states=True,
+            return_dict = False)
     if output_layer_index == 'all':
         return [h.cpu() for h in hidden_states]
     return hidden_states[output_layer_index].cpu()
@@ -278,7 +281,7 @@ class BERTScore:
             step_iterator = range(n_batch)
 
         if retrain_idf:
-            idf = train_idf(self.tokenizer, references, batch_size=1000, verbose=verbose)
+            idf = train_idf(self.tokenizer, references, batch_size=1000)
             idf = idf_numpy_to_embed(idf)
         else:
             idf = self.idf
@@ -414,7 +417,7 @@ def idf_numpy_to_embed(idf_array):
         >>> type(idf_embed)
         $ torch.nn.modules.sparse.Embedding
     """
-    idf = torch.tensor([idf_array]).T
+    idf = torch.tensor(idf_array).unsqueeze(0).T
     idf_embed = torch.nn.Embedding(idf.size()[0], 1, _weight=idf)
     idf_embed.weight.requires_grad = False
     return idf_embed
@@ -433,19 +436,15 @@ def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
     Returns:
         idf (numpy.ndarray) : shape = (bert_tokenizer.vocab_size,)
     """
-    n_sents = len(references)
+    dataloader = DataLoader(references, batch_size=batch_size, shuffle=False)
     counter = Counter()
-    begin_index = list(range(0, n_sents, batch_size))
 
-    if verbose:
-        iterator = tqdm(begin_index, total=round(n_sents / batch_size), desc='Train IDF')
-    else:
-        iterator = begin_index
-
-    for i in iterator:
+    for datas in tqdm(dataloader):
         encoding = bert_tokenizer.batch_encode_plus(
-            references[i: i + batch_size],
-            add_special_tokens=False)
+            datas,
+            add_special_tokens=False,
+            truncation=True
+            )
         subcounter = Counter(idx for sent in encoding['input_ids'] for idx in sent)
         counter.update(subcounter)
 
