@@ -452,5 +452,5 @@ def train_idf(bert_tokenizer, references, batch_size=1000, verbose=True):
     indices, df = zip(*counter.items())
     idf[np.array(indices)] += np.array(df)
     idf = 1 / idf
-    idf[np.array(bert_tokenizer.all_special_ids, dtype=np.int)] = 0
+    idf[np.array(bert_tokenizer.all_special_ids, dtype=int)] = 0
     return idf
